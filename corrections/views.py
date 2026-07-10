@@ -19,7 +19,7 @@ def get_CorrectionType(request):
 
 
 
-class CorrectionAPI(APIView):
+class CorrectionAPICrud(APIView):
 
     parser_classes = [MultiPartParser, FormParser]
 
@@ -137,9 +137,62 @@ class CorrectionListAPI(APIView):
             return Response({
                 "status": "error",
                 "message": "Correction not found"
-            }, status=404)   
- 
+            }, status=404) 
+         
+
+class CorrectionperAPI(APIView):
+
+
+
+    # def get(self, request):
+
+    #     paper_id = request.query_params.get(
+    #         'paper_id'
+    #     )
+
+    #     print("paper_id =", paper_id)
+
+    #     queryset = Correction.objects.all()
+
+    #     if paper_id:
+    #         queryset = queryset.filter(
+    #             correct_title_id=paper_id
+    #         )
+
+    #     serializer = CorrectionSerializer(
+    #         queryset,
+    #         many=True
+    #     )
+
+    #     print(serializer.data)
+
+    #     return Response(serializer.data)
+    
+     def get(self, request, id=None):
+
+        if id is not None:
+            ...
         
+        corrections = Correction.objects.all()
+
+        paper  = request.query_params.get('paper')
+        
+
+        if paper:
+            corrections = corrections.filter(
+                paper_id=paper
+            )
+
+       
+        serializer = CorrectionSerializer(
+            corrections,
+            many=True
+        )
+        return Response(serializer.data)
+    
+    
+
+            
 class CorrectionDetailAPI(APIView):
     def get(self, request, id):
 
@@ -159,7 +212,7 @@ class CorrectionDetailAPI(APIView):
                 "status": "error",
                 "message": "Correction not found"
             }, status=404)   
- 
+
 
 
 class CorrectionVideosAPI(APIView):
@@ -187,82 +240,82 @@ class CorrectionVideosAPI(APIView):
     #get all Corrections 
 
 
-    def patch(self, request, id):
+def patch(self, request, id):
 
-        try:
-            video = Videos.objects.get(id=id)
+    try:
+        video = Videos.objects.get(id=id)
 
-        except Videos.DoesNotExist:
-
-            return Response({
-                "status": "error",
-                "message": " correction Video  not found"
-            }, status=404)
-
-        serializer = VideoSerializer(
-            video,
-            data=request.data,
-            partial=True
-        )
-
-        if serializer.is_valid():
-
-            serializer.save()
-
-            return Response({
-                "status": "success",
-                "message": "Correction Video updated successfully",
-                "data": serializer.data
-            })
+    except Videos.DoesNotExist:
 
         return Response({
             "status": "error",
-            "errors": serializer.errors
-        }, status=400)
+            "message": " correction Video  not found"
+        }, status=404)
 
-    def put(self, request, id):
-        try:
-            video = Videos.objects.get(id=id)
-        except Videos.DoesNotExist:
-            return Response(
-                {"error": "Not found"},
-                status=404
-            )
+    serializer = VideoSerializer(
+        video,
+        data=request.data,
+        partial=True
+    )
 
-        serializer = VideoSerializer(video, data=request.data)
+    if serializer.is_valid():
 
-        if serializer.is_valid():
-            serializer.save()
-
-            return Response({
-                "status": "success",
-                "message": "Correction video updated successfully",
-                "data": serializer.data
-            }, status=200)
-
-        return Response({
-            "status": "error",
-            "errors": serializer.errors
-        }, status=400)
-
-    def delete(self, request, id):
-
-        try:
-            video = Videos.objects.get(id=id)
-
-        except Videos.DoesNotExist:
-
-            return Response({
-                "status": "error",
-                "message": "Correction video not found"
-            }, status=404)
-
-        video.delete()
+        serializer.save()
 
         return Response({
             "status": "success",
-            "message": "Correction Video deleted successfully"
+            "message": "Correction Video updated successfully",
+            "data": serializer.data
         })
+
+    return Response({
+        "status": "error",
+        "errors": serializer.errors
+    }, status=400)
+
+def put(self, request, id):
+    try:
+        video = Videos.objects.get(id=id)
+    except Videos.DoesNotExist:
+        return Response(
+            {"error": "Not found"},
+            status=404
+        )
+
+    serializer = VideoSerializer(video, data=request.data)
+
+    if serializer.is_valid():
+        serializer.save()
+
+        return Response({
+            "status": "success",
+            "message": "Correction video updated successfully",
+            "data": serializer.data
+        }, status=200)
+
+    return Response({
+        "status": "error",
+        "errors": serializer.errors
+    }, status=400)
+
+def delete(self, request, id):
+
+    try:
+        video = Videos.objects.get(id=id)
+
+    except Videos.DoesNotExist:
+
+        return Response({
+            "status": "error",
+            "message": "Correction video not found"
+        }, status=404)
+
+    video.delete()
+
+    return Response({
+        "status": "success",
+        "message": "Correction Video deleted successfully"
+    })
     
 class VideoListAPI(APIView):
     def get(self, request):

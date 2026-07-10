@@ -11,10 +11,11 @@ app_name = 'corrections'
 urlpatterns = [
 
     # path('correction/', get_CorrectionType, name = 'correction'),
-    path('correction/', CorrectionAPI.as_view(), name='correction'),
-    path('correction/<int:id>/', CorrectionAPI.as_view(), name='correction-update-delete'), 
+    path('correction/', CorrectionAPICrud.as_view(), name='correction'),
+    path('correction/<int:id>/', CorrectionAPICrud.as_view(), name='correction-update-delete'), 
     path("correctionl/", CorrectionListAPI.as_view(), name="correction-list"),
-    path("correctionl/<int:id>/", CorrectionDetailAPI.as_view(), name="correction-detail"),
+    path("correctionone/<int:id>/", CorrectionDetailAPI.as_view(), name="correction-detail"),
+    path("correctionby/", CorrectionperAPI.as_view(), name="correction-by-paper"),
 
     # path('correction/<int:id>/', CorrectionAPI.as_view(), name='correction-detail'),
 

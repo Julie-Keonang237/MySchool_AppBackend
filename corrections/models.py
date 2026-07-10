@@ -4,7 +4,7 @@ from sujetsExam.models import Paper
 # Create your models here.
 class Correction(models.Model):
      correct_title = models.CharField(max_length=100)
-     subject_name= models.CharField(max_length=100)
+    # subjectName= models.CharField(max_length=100)
      correct_file = models.FileField(upload_to = 'documents/', null = True, blank=True)
      paper_title  = models.ForeignKey(Paper, on_delete= models.CASCADE)
      updated = models.DateTimeField(auto_now=True)

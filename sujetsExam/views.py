@@ -59,81 +59,66 @@ class ExamTypeAPIcrud(APIView):
             "data": serializer.data
         })
         
-    def put(self, request):
-        data = request.data
-        if not data.get('id'):
-            return Response({
-                "Message": "data not updated",
-                "errors": "id is required",
-            })
-        
+    def put(self, request, id):                     # id from the path
         try:
-            examType = ExamType.objects.get(id=data.get('id'))
+            exam_type = ExamType.objects.get(id=id)  # use the path id
         except ExamType.DoesNotExist:
             return Response({
-                "Message": "data not updated",
-                "errors": "Exam type not found"
+                "status": "error",
+                "message": "Exam type not found"
             }, status=404)
-        
-        serializer = ExamTypeSerializer(examType, data=data)
-        if not serializer.is_valid():     
+
+        serializer = ExamTypeSerializer(exam_type, data=request.data)
+        if not serializer.is_valid():
             return Response({
-                "Message": "data not updated correctly",
+                "status": "error",
                 "errors": serializer.errors,
-            })
-        serializer.save()
-        return Response({
-            "Message": "data updated correctly",
-            "data": serializer.data
-        })
-    
-    def patch(self, request):
-        data = request.data
-        if not data.get('id'):
-            return Response({
-                "Message": "data not updated",
-                "errors": "id is required",
-            })
-        
-        try:
-            examType = ExamType.objects.get(id=data.get('id'))
-        except ExamType.DoesNotExist:
-            return Response({
-                "Message": "data not updated",
-                "errors": "Exam type not found"
-            }, status=404)
-        
-        serializer = ExamTypeSerializer(examType, data=data, partial=True)
-        if not serializer.is_valid():     
-            return Response({
-                "Message": "data not saved",
-                "errors": serializer.errors,
-            })
-        serializer.save()
-        return Response({
-            "Message": "data saved correctly",
-            "data": serializer.data
-        })
-    
-    def delete(self, request):
-        data = request.data
-        if not data.get('id'):
-            return Response({
-                "message": "Data not deleted",
-                "errors": "id is required"
             }, status=400)
-        
+
+        serializer.save()
+        return Response({
+            "status": "success",
+            "message": "Exam type updated successfully",
+            "data": serializer.data
+        }, status=200)
+
+    def patch(self, request, id):                  # id from the path
         try:
-            exam_type = ExamType.objects.get(id=data.get('id'))
-            exam_type.delete()
-            return Response({
-                "message": "Data deleted successfully"
-            }, status=200)
+            exam_type = ExamType.objects.get(id=id)
         except ExamType.DoesNotExist:
             return Response({
-                "message": "Data not deleted",
-                "errors": "Exam type not found"
+                "status": "error",
+                "message": "Exam type not found"
             }, status=404)
+
+        serializer = ExamTypeSerializer(exam_type, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response({
+                "status": "error",
+                "errors": serializer.errors,
+            }, status=400)
+
+        serializer.save()
+        return Response({
+            "status": "success",
+            "message": "Exam type updated successfully",
+            "data": serializer.data
+        }, status=200)
+
+    def delete(self, request, id):                 # id from the path
+        try:
+            exam_type = ExamType.objects.get(id=id)
+        except ExamType.DoesNotExist:
+            return Response({
+                "status": "error",
+                "message": "Exam type not found"
+            }, status=404)
+
+        exam_type.delete()
+        return Response({
+            "status": "success",
+            "message": "Exam type deleted successfully"
+        }, status=200)
         
 class ExamTypeAPI(APIView):
 
@@ -189,81 +174,66 @@ class SubjetAPIcrud(APIView):
             "data": serializer.data
         })
         
-    def put(self, request):
-        data = request.data
-        if not data.get('id'):
-            return Response({
-                "Message": "data not updated",
-                "errors": "id is required",
-            })
-        
+    def put(self, request, id):                     # id comes from the path
         try:
-            subjects = Subject.objects.get(id=data.get('id'))
+            subject = Subject.objects.get(id=id)    # use the path id
         except Subject.DoesNotExist:
             return Response({
-                "Message": "data not updated",
-                "errors": "Exam type not found"
+                "status": "error",
+                "message": "Subject not found"
             }, status=404)
-        
-        serializer = SubjectSerializer(subjects, data=data)
-        if not serializer.is_valid():     
+
+        serializer = SubjectSerializer(subject, data=request.data)
+        if not serializer.is_valid():
             return Response({
-                "Message": "data not updated correctly",
+                "status": "error",
                 "errors": serializer.errors,
-            })
-        serializer.save()
-        return Response({
-            "Message": "data updated correctly",
-            "data": serializer.data
-        })
-    
-    def patch(self, request):
-        data = request.data
-        if not data.get('id'):
-            return Response({
-                "Message": "data not updated",
-                "errors": "id is required",
-            })
-        
-        try:
-            subjects = Subject.objects.get(id=data.get('id'))
-        except Subject.DoesNotExist:
-            return Response({
-                "Message": "data not updated",
-                "errors": "Subject not found"
-            }, status=404)
-        
-        serializer = SubjectSerializer(subjects, data=data, partial=True)
-        if not serializer.is_valid():     
-            return Response({
-                "Message": "data not saved",
-                "errors": serializer.errors,
-            })
-        serializer.save()
-        return Response({
-            "Message": "data saved correctly",
-            "data": serializer.data
-        })
-    
-    def delete(self, request):
-        data = request.data
-        if not data.get('id'):
-            return Response({
-                "message": "Data not deleted",
-                "errors": "id is required"
             }, status=400)
-        
+
+        serializer.save()
+        return Response({
+            "status": "success",
+            "message": "Subject updated successfully",
+            "data": serializer.data
+        }, status=200)
+
+    def patch(self, request, id):                  # id comes from the path
         try:
-            subjects = Subject.objects.get(id=data.get('id'))
-            subjects.delete()
-            return Response({
-                "message": "Data deleted successfully"
-            }, status=200)
+            subject = Subject.objects.get(id=id)    # use the path id
         except Subject.DoesNotExist:
             return Response({
-                "message": "Data not deleted",
-                "errors": "Exam type not found"
+                "status": "error",
+                "message": "Subject not found"
             }, status=404)
+
+        serializer = SubjectSerializer(subject, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response({
+                "status": "error",
+                "errors": serializer.errors,
+            }, status=400)
+
+        serializer.save()
+        return Response({
+            "status": "success",
+            "message": "Subject updated successfully",
+            "data": serializer.data
+        }, status=200)
+
+    def delete(self, request, id):                 # id comes from the path
+        try:
+            subject = Subject.objects.get(id=id)    # use the path id
+        except Subject.DoesNotExist:
+            return Response({
+                "status": "error",
+                "message": "Subject not found"
+            }, status=404)
+
+        subject.delete()
+        return Response({
+            "status": "success",
+            "message": "Subject deleted successfully"
+        }, status=200)
         
         
 class SubjectPerTypeAPI(APIView):
