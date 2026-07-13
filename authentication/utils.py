@@ -6,16 +6,17 @@ from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 class Util:
-    @staticmethod
-    def send_email(data):
-        """Generic email sender"""
-        email = EmailMessage(
-            subject=data['subject'],
-            body=data['body'],
-            from_email=settings.EMAIL_HOST_USER,
-            to=[data['to_email']],
-        )
-        email.send()
+     @staticmethod
+     def send_email(data):
+
+            email = EmailMessage(
+                subject=data["subject"],
+                body=data["body"],
+                from_email=settings.EMAIL_HOST_USER,
+                to=[data["to_email"]],
+            )
+
+            email.send(fail_silently=False)
     
 def send_verification_email(user, request=None):
     """
@@ -29,8 +30,18 @@ def send_verification_email(user, request=None):
         
         # Build verification URL for Flutter app
         # Change this to your Flutter app's deep link URL
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-        verification_url = f"{frontend_url}/verify-email?uid={uid}&token={token}"
+       # frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+
+        backend_url = getattr(
+                settings,
+                "BACKEND_URL",
+                "http://127.0.0.1:8000"
+            )
+        verification_url = (
+            f"{backend_url}/api/auth/verify-email/"
+            f"?uid={uid}&token={token}"
+        )
+        #verification_url = f"{frontend_url}/verify-email?uid={uid}&token={token}"
         
         # Email content
         subject = 'Verify Your Email Address'

@@ -18,6 +18,13 @@ from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import smart_str
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
+import re
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+
+from .models import User
+
+
 
 def get_token_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -28,68 +35,164 @@ def get_token_for_user(user):
     }
 
 
+
+
+from email_validator import validate_email as validate_real_email, EmailNotValidError
+from django.contrib.auth import get_user_model
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+
+User = get_user_model()
+
+
 class UserRegistrationView(APIView):
     serializer_class = UserRegistrationSerializer
     permission_classes = [AllowAny]
-    
-    def post(self, request):
-        serializer = UserRegistrationSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            
-            # Send verification email with link (NOT OTP)
-            email_result = send_verification_email(user, request)
-            
-            if email_result[0]:  # Success
-                return Response({
-                    "status": "success", 
-                    "message": "User registered successfully. Please check your email for verification link.", 
-                    'data': {
-                        'email': user.email,
-                        'user_name': user.user_name,
-                        'is_verified': user.is_verified
-                    }
-                }, status=status.HTTP_201_CREATED)
-            else:
-                return Response({
-                    "status": "warning", 
-                    "message": f"User created but verification email failed: {email_result[1]}", 
-                    'data': serializer.data
-                }, status=status.HTTP_201_CREATED)
-                
-        return Response({"status": "error", "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
+    def post(self, request):
+
+        email = request.data.get("email")
+
+        if not email:
+            return Response(
+                {
+                    "status": "error",
+                    "message": "Email is required."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validate syntax and deliverability
+        try:
+            validated = validate_real_email(
+                email,
+                check_deliverability=True
+            )
+
+            email = validated.email
+
+        except EmailNotValidError as e:
+
+            return Response(
+                {
+                    "status": "error",
+                    "message": str(e)
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if User.objects.filter(email=email).exists():
+
+            return Response(
+                {
+                    "status": "error",
+                    "message": "A user with this email already exists."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = request.data.copy()
+        data["email"] = email
+
+        serializer = UserRegistrationSerializer(data=data)
+
+        if not serializer.is_valid():
+
+            return Response(
+                {
+                    "status": "error",
+                    "errors": serializer.errors
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = serializer.save()
+
+        user.is_verified = False
+        user.is_active = False
+        user.save()
+
+        success, message = send_verification_email(user)
+
+        if not success:
+
+            user.delete()
+
+            return Response(
+                {
+                    "status": "error",
+                    "message": message
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            {
+                "status": "success",
+                "message":
+                    "Registration successful. Please check your email to verify your account."
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 class VerifyEmailView(APIView):
-    """
-    Verify email using token (NO OTP)
-    Expects: {"uidb64": "MTU", "token": "abc123def456"}
-    """
-    serializer_class = VerifyEmailSerializer
-    permission_classes = [AllowAny]
-    
-    def post(self, request):
-        serializer = VerifyEmailSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            user = serializer.validated_data['user']
-            
-            # Mark user as verified
-            user.is_verified = True
-            user.save()
-            
-            # Generate tokens for auto-login
-            token = get_token_for_user(user)
-            
-            return Response({
-                "status": "success", 
-                "message": "Email verified successfully", 
-                "email": user.email,
-                "user_name": user.user_name,
-                "token": token
-            }, status=status.HTTP_200_OK)
-            
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+
+        uid = request.GET.get("uid")
+        token = request.GET.get("token")
+
+        if not uid or not token:
+
+            return Response(
+                {
+                    "status": "error",
+                    "message": "Invalid verification link."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+
+            user_id = urlsafe_base64_decode(uid).decode()
+
+            user = User.objects.get(id=user_id)
+
+        except Exception:
+
+            return Response(
+                {
+                    "status": "error",
+                    "message": "Invalid verification link."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if PasswordResetTokenGenerator().check_token(user, token):
+
+            user.is_verified = True
+            user.is_active = True
+
+            user.save()
+
+            return Response(
+                {
+                    "status": "success",
+                    "message": "Email verified successfully."
+                }
+            )
+
+        return Response(
+            {
+                "status": "error",
+                "message": "Verification link has expired."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 class ResendVerificationEmailView(APIView):
     """
@@ -125,13 +228,7 @@ class UserLoginView(APIView):
     permission_classes = [AllowAny]
     
     def post(self, request):
-        # try:
-        #     # ... your existing code ...
-        # except Exception as e:
-
-        #     import traceback
-        #     traceback.print_exc()
-        #     return Response({"status": "error", "message": str(e)}, status=500)
+       
         print("🔍 Received data:", request.data) 
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
