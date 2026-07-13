@@ -1,6 +1,6 @@
 from django.urls import path
 
-from authentication.views import ResendVerificationEmailView, SendPasswordResetEmailView, UserChangePasswordView, UserLoginView, UserLogoutView, UserPasswordResetView, UserProfileView, UserRegistrationView, VerifyEmailView
+from authentication.views import ResendVerificationEmailView, SendPasswordResetEmailView, UserChangePasswordView, UserLoginView, UserLogoutView, UserPasswordResetView, UserProfileView, UserRegistrationView, VerifyEmailView, VerifyEmailRedirectView, VerifyEmailOTPView
 from .views import *
 
 
@@ -11,7 +11,9 @@ urlpatterns = [
 
     path('register/', UserRegistrationView.as_view(), name='register'),
     path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
-    path('resend-verification/', ResendVerificationEmailView.as_view(), name='resend-verification'),  
+    path('verify-email-otp/', VerifyEmailOTPView.as_view(), name='verify-email-otp'),
+    path('verify-email-redirect/', VerifyEmailRedirectView.as_view(), name='verify-email-redirect'),
+    path('resend-verification/', ResendVerificationEmailView.as_view(), name='resend-verification'),
     # NEW
     path('login/', UserLoginView.as_view(), name='login'),
     path('profile/', UserProfileView.as_view(), name='profile'),
@@ -19,6 +21,6 @@ urlpatterns = [
     path('send-reset-password-email/', SendPasswordResetEmailView.as_view(), name='send-reset-password-email'),
     path('reset-password/<uid>/<token>/', UserPasswordResetView.as_view(), name='reset-password'),
     path('logout/', UserLogoutView.as_view(), name='logout'),
-    path('auth/token/refresh/', RefreshAccessTokenView.as_view(), name='token_refresh'),
+    path('token/refresh/', RefreshAccessTokenView.as_view(), name='token_refresh'),
 
 ]

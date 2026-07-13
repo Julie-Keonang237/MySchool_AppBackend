@@ -27,5 +27,8 @@ urlpatterns = [
     path('subjectcrud/<int:id>/', SubjetAPIcrud.as_view(), name='subject-detail'),
     path('subjectsE/', SubjectPerTypeAPI.as_view(), name='subject-per-ExamType'),
 
-   
+    path('generated-exams/', GeneratedExamListCreateAPI.as_view(), name='generated-exam-list-create'),
+    path('generated-exams/<int:id>/', GeneratedExamDetailAPI.as_view(), name='generated-exam-detail'),
+    path('generated-exams/<int:id>/download/', DownloadGeneratedExamView.as_view(), name='generated-exam-download'),
+
 ]

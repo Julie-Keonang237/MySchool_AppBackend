@@ -79,6 +79,50 @@ class VerifyEmailSerializer(serializers.Serializer):
             })
 
 
+class VerifyEmailOTPSerializer(serializers.Serializer):
+    """Verify email using the 6-digit code sent alongside the link."""
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+
+    def validate(self, attrs):
+        User = get_user_model()
+
+        try:
+            user = User.objects.get(email=attrs['email'])
+        except User.DoesNotExist:
+            raise serializers.ValidationError({
+                "status": "error",
+                "message": "No user found with this email"
+            })
+
+        if user.is_verified:
+            raise serializers.ValidationError({
+                "status": "error",
+                "message": "Email already verified"
+            })
+
+        if not user.verification_otp or not user.verification_otp_expires_at:
+            raise serializers.ValidationError({
+                "status": "error",
+                "message": "No verification code was requested. Please request a new one."
+            })
+
+        if timezone.now() > user.verification_otp_expires_at:
+            raise serializers.ValidationError({
+                "status": "error",
+                "message": "Verification code has expired. Please request a new one."
+            })
+
+        if attrs['otp'] != user.verification_otp:
+            raise serializers.ValidationError({
+                "status": "error",
+                "message": "Invalid verification code."
+            })
+
+        attrs['user'] = user
+        return attrs
+
+
 # ADD THIS NEW serializer
 class ResendVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -126,10 +170,20 @@ class UserLoginSerializer(serializers.Serializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    user = serializers.SerializerMethodField()
-    
+    # Frontend's UserModelParams (user_model.dart) deserializes these exact
+    # camelCase keys and requires non-null strings/bools — is_active/
+    # is_verified are snake_case on the model, and sexe is nullable there
+    # but the Dart side has no null case for it.
+    isActive = serializers.BooleanField(source='is_active')
+    isVerified = serializers.BooleanField(source='is_verified')
+    sexe = serializers.SerializerMethodField()
+
     class Meta:
-        fields = ['id', 'user', 'user_name']
+        model = User
+        fields = ['id', 'email', 'user_name', 'user_surname', 'telephone', 'role', 'sexe', 'isActive', 'isVerified']
+
+    def get_sexe(self, obj):
+        return obj.sexe or ''
 
 
 class UserChangePasswordSerializer(serializers.Serializer):

@@ -278,7 +278,15 @@ EMAIL_HOST_USER = 'ktjljulie@gmail.com'
 EMAIL_HOST_PASSWORD = 'gxfikmsjuwdfqjmd'
 
 APP_NAME = 'SchoolApp'
-FRONTEND_URL = config('FRONTEND_URL', 'http://localhost:3000')
+# Fallback verification link base, only used when send_verification_email()
+# is called without a request (normally it builds this from the incoming
+# request's host instead, so it always matches whatever host the client
+# used — emulator, LAN IP for a physical phone, or production domain).
+# Points at VerifyEmailRedirectView, which hands off to the Flutter app's
+# myschool:// deep link (see MySchool_AppFrontEnd AndroidManifest.xml /
+# Info.plist). This used to point at a web frontend (localhost:3000) that
+# never existed in this project, so verification emails were dead links.
+EMAIL_VERIFICATION_URL = config('EMAIL_VERIFICATION_URL', 'http://localhost:8000/api/auth/verify-email-redirect/')
 
 
 

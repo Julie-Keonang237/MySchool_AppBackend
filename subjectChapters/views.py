@@ -1,7 +1,7 @@
 from django.shortcuts import render
-from .models import Subject, Chapter
+from .models import Subject, Chapter, SubjectChapter
 from rest_framework.response import Response
-from  .serializers import SubjectSerializer, ChapterSerializer
+from  .serializers import SubjectSerializer, ChapterSerializer, SubjectChapterSerializer
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.views import status
@@ -203,12 +203,33 @@ class ChapterListAPI(APIView):
                 "status": "success",
                 "data": serializer.data
             })
-        except chapter.DoesNotExist:  
+        except Chapter.DoesNotExist:
             return Response({
                 "status": "error",
                 "message": "No chapters found"
             }, status=404)
-        
+
+
+class ChaptersForSubjectAPI(APIView):
+    """GET /api/subjectChapters/chapters-for-subject/?subject=<id> — chapters belonging to a subject."""
+
+    def get(self, request):
+        subject = request.query_params.get('subject')
+        if not subject:
+            return Response({
+                "status": "error",
+                "message": "Missing 'subject' query parameter"
+            }, status=400)
+
+        links = SubjectChapter.objects.filter(sub_name_id=subject)
+        serializer = SubjectChapterSerializer(links, many=True)
+
+        return Response({
+            "status": "success",
+            "data": serializer.data
+        })
+
+
 class ChapterDetailAPI(APIView):
     def get(self, request, id):
         try:
