@@ -1,11 +1,15 @@
 from django.shortcuts import render
+from django.core.files.base import ContentFile
 from .models import ExamType
 from .models import Paper
 from .models import Subject
 from .models import ExamSubject
+from .models import GeneratedExam, GeneratedExamItem
 from rest_framework.response import Response
 from .serializers import ExamSubjectSerializer, ExamTypeSerializer
 from .serializers import SubjectSerializer
+from .serializers import GeneratedExamSerializer
+from .pdf import render_exam_pdf
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.views import status
@@ -393,7 +397,7 @@ class PaperAPI(APIView):
 
         if subject:
             papers = papers.filter(
-                subject_id=subject
+                subjectName_id=subject
             )
 
         if year:
@@ -485,4 +489,102 @@ class DownloadPaperView(APIView):
             f'attachment; filename="{filename}"'
         )
 
+        return response
+
+
+class GeneratedExamListCreateAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        exams = GeneratedExam.objects.filter(created_by=request.user)
+        serializer = GeneratedExamSerializer(exams, many=True, context={'request': request})
+        return Response({
+            "status": "success",
+            "data": serializer.data
+        })
+
+    def post(self, request):
+        data = request.data
+        items_data = data.get('items', [])
+
+        if not items_data:
+            return Response({
+                "status": "error",
+                "message": "At least one exercise item is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            exam = GeneratedExam.objects.create(
+                title=data.get('title', ''),
+                subject_id=data.get('subject_id'),
+                level_id=data.get('level_id'),
+                instructions=data.get('instructions', ''),
+                created_by=request.user,
+            )
+        except Exception as e:
+            return Response({
+                "status": "error",
+                "message": str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        for order, item in enumerate(items_data):
+            GeneratedExamItem.objects.create(
+                exam=exam,
+                exercise_id=item['exercise_id'],
+                marks=item['marks'],
+                order=item.get('order', order),
+            )
+
+        pdf_buffer = render_exam_pdf(exam)
+        exam.pdf_file.save(f"exam_{exam.id}.pdf", ContentFile(pdf_buffer.read()), save=True)
+
+        serializer = GeneratedExamSerializer(exam, context={'request': request})
+        return Response({
+            "status": "success",
+            "message": "Exam generated successfully",
+            "data": serializer.data
+        }, status=status.HTTP_201_CREATED)
+
+
+class GeneratedExamDetailAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id):
+        try:
+            exam = GeneratedExam.objects.get(id=id, created_by=request.user)
+        except GeneratedExam.DoesNotExist:
+            return Response({
+                "status": "error",
+                "message": "Generated exam not found"
+            }, status=404)
+
+        serializer = GeneratedExamSerializer(exam, context={'request': request})
+        return Response({
+            "status": "success",
+            "data": serializer.data
+        })
+
+
+class DownloadGeneratedExamView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id):
+        try:
+            exam = GeneratedExam.objects.get(id=id, created_by=request.user)
+        except GeneratedExam.DoesNotExist:
+            raise Http404("Generated exam not found")
+
+        if not exam.pdf_file:
+            raise Http404("No PDF attached to this exam")
+
+        file_path = exam.pdf_file.path
+        if not os.path.exists(file_path):
+            raise Http404("File not found on server")
+
+        filename = os.path.basename(file_path)
+        response = FileResponse(
+            open(file_path, "rb"),
+            content_type="application/pdf"
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response

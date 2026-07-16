@@ -22,5 +22,6 @@ urlpatterns = [
     path('chapter/<int:id>/', ChapterAPI.as_view(), name='chapter-update-delete'),
     path('chapters/', ChapterListAPI.as_view(), name='chapter-list'),
     path('chapters/<int:id>/', ChapterDetailAPI.as_view(), name='chapter-detail'),
-  
+    path('chapters-for-subject/', ChaptersForSubjectAPI.as_view(), name='chapters-for-subject'),
+
 ]

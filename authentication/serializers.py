@@ -15,16 +15,28 @@ from django.contrib.auth import get_user_model
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    passwordConfirm = serializers.CharField(style={'input_type': 'password'}, write_only=True)
+    passwordConfirm = serializers.CharField(
+        style={'input_type': 'password'}, 
+        write_only=True
+    )
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'user_name', 'user_surname', 'telephone', 'password', 
-                  'passwordConfirm', 'role', 'is_verified', 'is_active', 
-                  'is_admin', 'is_online', 'created_at', 'updated_at']
+        fields = [
+            'id', 'email', 'user_name', 'user_surname', 'telephone', 
+            'password', 'passwordConfirm', 'role',
+            'is_verified', 'is_active', 'is_admin', 'is_online',
+            'created_at', 'updated_at'
+        ]
         extra_kwargs = {
             'password': {'write_only': True},
-            'id': {'read_only': True}
+            'id': {'read_only': True},
+            'is_verified': {'read_only': True},  # Set by system
+            'is_active': {'read_only': True},    # Set by system
+            'is_admin': {'read_only': True},     # Set by system
+            'is_online': {'read_only': True},    # Set by system
+            'created_at': {'read_only': True},   # Auto-set
+            'updated_at': {'read_only': True},   # Auto-set
         }
 
     def validate(self, attrs):
@@ -32,15 +44,20 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         passwordConfirm = attrs.get('passwordConfirm')
         
         if password != passwordConfirm:
-            raise serializers.ValidationError({"status": "error", "Message": "Password and Confirm Password Doesn't Match"})
+            raise serializers.ValidationError({
+                "passwordConfirm": "Passwords do not match."
+            })
         
-        # Remove tc validation
         return attrs
 
     def create(self, validated_data):
+        # Remove passwordConfirm before creating user
+        validated_data.pop('passwordConfirm', None)
+        
+        # Create user with hashed password
         user = User.objects.create_user(**validated_data)
+        
         return user
-
 
 # This is the important change - REPLACE your VerifyEmailSerializer
 class VerifyEmailSerializer(serializers.Serializer):
@@ -77,6 +94,50 @@ class VerifyEmailSerializer(serializers.Serializer):
                 "status": "error", 
                 "message": "Invalid verification link"
             })
+
+
+class VerifyEmailOTPSerializer(serializers.Serializer):
+    """Verify email using the 6-digit code sent alongside the link."""
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+
+    def validate(self, attrs):
+        User = get_user_model()
+
+        try:
+            user = User.objects.get(email=attrs['email'])
+        except User.DoesNotExist:
+            raise serializers.ValidationError({
+                "status": "error",
+                "message": "No user found with this email"
+            })
+
+        if user.is_verified:
+            raise serializers.ValidationError({
+                "status": "error",
+                "message": "Email already verified"
+            })
+
+        if not user.verification_otp or not user.verification_otp_expires_at:
+            raise serializers.ValidationError({
+                "status": "error",
+                "message": "No verification code was requested. Please request a new one."
+            })
+
+        if timezone.now() > user.verification_otp_expires_at:
+            raise serializers.ValidationError({
+                "status": "error",
+                "message": "Verification code has expired. Please request a new one."
+            })
+
+        if attrs['otp'] != user.verification_otp:
+            raise serializers.ValidationError({
+                "status": "error",
+                "message": "Invalid verification code."
+            })
+
+        attrs['user'] = user
+        return attrs
 
 
 # ADD THIS NEW serializer
@@ -126,10 +187,20 @@ class UserLoginSerializer(serializers.Serializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    user = serializers.SerializerMethodField()
-    
+    # Frontend's UserModelParams (user_model.dart) deserializes these exact
+    # camelCase keys and requires non-null strings/bools — is_active/
+    # is_verified are snake_case on the model, and sexe is nullable there
+    # but the Dart side has no null case for it.
+    isActive = serializers.BooleanField(source='is_active')
+    isVerified = serializers.BooleanField(source='is_verified')
+    sexe = serializers.SerializerMethodField()
+
     class Meta:
-        fields = ['id', 'user', 'user_name']
+        model = User
+        fields = ['id', 'email', 'user_name', 'user_surname', 'telephone', 'role', 'sexe', 'isActive', 'isVerified']
+
+    def get_sexe(self, obj):
+        return obj.sexe or ''
 
 
 class UserChangePasswordSerializer(serializers.Serializer):

@@ -1,7 +1,7 @@
 from django.shortcuts import render
-from .models import OptionModel, Level
+from .models import OptionModel, Level, SubjectLevel
 from rest_framework.response import Response
-from .serializers import OptionSerializer, LevelSerializer
+from .serializers import OptionSerializer, LevelSerializer, SubjectLevelSerializer
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.views import status
@@ -225,4 +225,24 @@ class LevelDetailAPI(APIView):
                 "message": "Level not found"
             }, status=404)
 
-    
+
+class SubjectsForLevelAPI(APIView):
+    """GET /api/filiereClass/subjects-for-level/?level=<id> — subjects offered at a given level."""
+
+    def get(self, request):
+        level = request.query_params.get('level')
+        if not level:
+            return Response({
+                "status": "error",
+                "message": "Missing 'level' query parameter"
+            }, status=400)
+
+        links = SubjectLevel.objects.filter(level_name_id=level)
+        serializer = SubjectLevelSerializer(links, many=True)
+
+        return Response({
+            "status": "success",
+            "data": serializer.data
+        })
+
+

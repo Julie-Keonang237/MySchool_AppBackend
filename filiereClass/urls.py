@@ -22,5 +22,6 @@ urlpatterns = [
     path('level/<int:id>/', LevelAPI.as_view(), name='level-update-delete'),
     path('levels/', LevelListAPI.as_view(), name='level-list'),
     path('levels/<int:id>/', LevelDetailAPI.as_view(), name='level-detail'),
-  
+    path('subjects-for-level/', SubjectsForLevelAPI.as_view(), name='subjects-for-level'),
+
 ]

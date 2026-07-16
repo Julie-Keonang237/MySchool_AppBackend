@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 # Create your models here.
@@ -60,3 +61,30 @@ class ExamSubject(models.Model):
 
     class Meta:
         ordering = ['-updated']
+
+
+class GeneratedExam(models.Model):
+    """An exam paper assembled by drawing exercises per chapter (see exercise.views.DrawExercisesAPI)."""
+    title = models.CharField(max_length=200)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    level = models.ForeignKey('filiereClass.Level', on_delete=models.CASCADE)
+    instructions = models.TextField(blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    pdf_file = models.FileField(upload_to='generated_exams/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+
+class GeneratedExamItem(models.Model):
+    exam = models.ForeignKey(GeneratedExam, on_delete=models.CASCADE, related_name='items')
+    exercise = models.ForeignKey('exercise.Exercise', on_delete=models.CASCADE)
+    marks = models.PositiveIntegerField()
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
